@@ -66,7 +66,12 @@ my_dataset.pop('THE TRAVEL AGENCY IN THE PARK', 0)
 # Import AddingFeature class to add new feature
 from AddingFeature import AddingFeature
 addFeature = AddingFeature(my_dataset, features_list)
-addFeature.duplicate_feature("exercised_stock_options", "exercised_stock_options_1")
+#addFeature.duplicate_feature("exercised_stock_options", "exercised_stock_options_1")
+addFeature.calculate_feature("total_stock_value", "exercised_stock_options", "new_features_1", "add")
+addFeature.calculate_feature("total_stock_value", "salary", "new_features_2", "add")
+addFeature.calculate_feature("shared_receipt_with_poi", "total_payments", "new_features_3", "multiply")
+addFeature.delete_feature("total_stock_value")
+#addFeature.delete_feature("salary")
 
 features_list = addFeature.get_current_features_list()
 my_dataset = addFeature.get_current_data_dict()
@@ -75,6 +80,7 @@ my_dataset = addFeature.get_current_data_dict()
 ### these two lines extract the features specified in features_list
 ### and extract them from data_dict, returning a numpy array
 data = featureFormat(my_dataset, features_list)
+
 
 
 
@@ -101,7 +107,7 @@ features = scaler.fit_transform(features)
 # Using feature selection to select the feature
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import f_classif
-k = 6
+k = 4
 selectKB = SelectKBest(f_classif, k = k)
 features = selectKB.fit_transform(features, labels)
 index = selectKB.get_support().tolist()
@@ -114,6 +120,10 @@ for i in range(len(index)):
 # Insert poi to the first element
 new_features_list.insert(0, "poi")
 
+
+# Re-run the featureFormat and targetFeatureSplit to remove all zeros data
+data = featureFormat(my_dataset, new_features_list)
+labels, features = targetFeatureSplit(data)
 
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
@@ -147,16 +157,19 @@ for train_idx, test_idx in skf:
     ### fit the classifier using training set, and test on test set
     
 
-#    parameter = {'base_estimator':[None, DecisionTreeClassifier(),
-#                                   RandomForestClassifier()],
-#                                   'n_estimators':[20, 50]}
+    parameter = {'base_estimator':[None, DecisionTreeClassifier(min_samples_split=5, max_features = None),
+                                   RandomForestClassifier(min_samples_split=3, max_features = None)],
+                                   'n_estimators':[20, 50, 110]}
     
     # Here comes weird part                               
-    parameter = {'base_estimator':[None],
-                                   'n_estimators':[50]}
+#    parameter = {'base_estimator':[RandomForestClassifier()],
+#                                   'n_estimators':[20]}
 
-    adaBoost = AdaBoostClassifier(learning_rate = 1, random_state = 0, algorithm='SAMME.R')
+#    clf = AdaBoostClassifier(learning_rate = 1, random_state = 0, algorithm='SAMME')
+    adaBoost = AdaBoostClassifier(learning_rate = 1, random_state = 0, algorithm='SAMME')
     clf = GridSearchCV(adaBoost, parameter)
+#    clf = AdaBoostClassifier(base_estimator = RandomForestClassifier(min_samples_split=5),
+#                             n_estimators = 110, learning_rate = 1, random_state = 0, algorithm='SAMME.R')
 #    base_estimator = RandomForestClassifier()
 #    clf = AdaBoostClassifier(base_estimator = None ,n_estimators = 50, learning_rate = 1, random_state = 0, algorithm='SAMME.R')
 #    clf = RandomForestClassifier(n_estimators = 2, random_state = 0)    
@@ -165,8 +178,8 @@ for train_idx, test_idx in skf:
     pred = clf.predict(features_test)
     
     accuracy = clf.score(features_test, labels_test) 
+    labels_test_1 = labels_test
     
-
     ### for each fold, print some metrics
     print
     print "Accuracy: %f " %accuracy
@@ -198,6 +211,6 @@ data_dict = my_dataset
 pickle.dump(clf, open("my_classifier.pkl", "w") )
 pickle.dump(data_dict, open("my_dataset.pkl", "w") )
 pickle.dump(features_list, open("my_feature_list.pkl", "w") )
-
+pickle.dump(data, open("my_data.pkl", "w"))
 
 
